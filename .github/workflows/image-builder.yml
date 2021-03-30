@@ -29,6 +29,9 @@ jobs:
     environment:
       name: ${{ github.event.inputs.environment }}
 
+    outputs:
+          image-uri: ${{ steps.BUILD-CUSTOM-VM-IMAGE.outputs.custom-image-uri }}
+
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -97,3 +100,35 @@ jobs:
             echo '######### run install.sh'
             cd /opt/app
             sudo sh install.sh
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Azure Login
+        uses: Azure/login@v1.1
+        with:
+          # Paste output of `az ad sp create-for-rbac` as value of secret variable: AZURE_CREDENTIALS
+          creds:  ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: create-vm
+        uses: azure/CLI@v1
+        with:
+          azcliversion: 2.0.72
+          inlineScript: |
+            az group create -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -l northeurope
+            ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}"  --admin-username vmUserName --generate-ssh-keys --location northeurope \
+            --image "${{needs.build.outputs.image-uri}} " --public-ip-address --query ipaddress)
+            az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
+            echo "::set-output name=ipaddress::$ipaddr"
+      - name: test-vm
+        uses: script
+        with:
+          inlineScript: |
+            curl http://{{ steps.output.ipaddress}}
+      
+      - name: cleanup
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az group delete -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -y
