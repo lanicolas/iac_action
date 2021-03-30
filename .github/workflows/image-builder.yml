@@ -112,23 +112,24 @@ jobs:
           creds:  ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: create-vm
-        uses: azure/CLI@v1
+        uses: Azure/cli@1.0.4
         with:
-          azcliversion: 2.0.72
           inlineScript: |
             az group create -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -l northeurope
             ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}"  --admin-username vmUserName --generate-ssh-keys --location northeurope \
-            --image "${{needs.build.outputs.image-uri}} " --public-ip-address-allocation dynamic --query ipaddress)
+            --image "${{needs.build.outputs.image-uri}} " --public-ip-address-allocation dynamic --query publicIpAddress)
             az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
             echo "::set-output name=ipaddress::$ipaddr"
+            
+      
       - name: test-vm
-        uses: script
+        uses: actions/github-script@v3.1.1
         with:
           inlineScript: |
             curl http://{{ steps.output.ipaddress}}
       
       - name: cleanup
-        uses: azure/CLI@v1
+        uses: azure/CLI@1.0.4
         with:
           inlineScript: |
             az group delete -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -y
