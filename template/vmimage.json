@@ -1,0 +1,46 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-08-01/tenantDeploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "sourceImageVhdUri": {
+            "type": "string",
+            "defaultValue": "https://vmdisksjm01.blob.core.windows.net/marketplacedisks/mydisk.vhd",
+            "metadata": {
+                "description": "The uri in the azure storage for the vm image"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Azure location where to create the resources"
+            }
+        }
+    },
+    "functions": [],
+    "variables": {
+        "imageName": "myCustomImage",
+        "sourceStorageAccountType": "Standard_LRS"
+    },
+    "resources": [
+        {
+            "comments": "example from https://github.com/Azure/azure-quickstart-templates/blob/master/101-vm-user-image-data-disks/azuredeploy.json",
+            "type": "Microsoft.Compute/images",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('imageName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "storageProfile": {
+                    "osDisk": {
+                        "osType": "Linux",
+                        "osState": "Generalized",
+                        "blobUri": "[parameters('sourceImageVhdUri')]",
+                        "storageAccountType": "[variables('sourceStorageAccountType')]"
+                    }
+                },
+                "hyperVGeneration": "V2"
+            }
+        }
+    ],
+    "outputs": {}
+}
