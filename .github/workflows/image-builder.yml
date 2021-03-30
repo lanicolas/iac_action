@@ -118,7 +118,7 @@ jobs:
           inlineScript: |
             az group create -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -l northeurope
             ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}"  --admin-username vmUserName --generate-ssh-keys --location northeurope \
-            --image "${{needs.build.outputs.image-uri}} " --public-ip-address --query ipaddress)
+            --image "${{needs.build.outputs.image-uri}} " --public-ip-address-allocation dynamic --query ipaddress)
             az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
             echo "::set-output name=ipaddress::$ipaddr"
       - name: test-vm
