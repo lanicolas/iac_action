@@ -30,7 +30,7 @@ jobs:
       name: ${{ github.event.inputs.environment }}
 
     outputs:
-          image-uri: ${{ steps.BUILD-CUSTOM-VM-IMAGE.outputs.custom-image-uri }}
+          image-uri: ${{ steps.build-vm-image.outputs.imageUri }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -85,7 +85,7 @@ jobs:
 
             exit $errorState
 
-      - name: BUILD-CUSTOM-VM-IMAGE
+      - name: build-vm-image
         uses: azure/build-vm-image@v0
         with:        
           resource-group-name: '${{ github.event.inputs.resourceGroup }}'
@@ -131,7 +131,7 @@ jobs:
         uses: actions/github-script@v3.1.1
         with:
           inlineScript: |
-            curl http://${{ steps.output.ipaddress}}
+            curl http://${{ steps.output.ipaddress }}
       
       - name: cleanup
         uses: azure/CLI@1.0.4
