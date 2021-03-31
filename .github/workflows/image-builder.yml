@@ -30,7 +30,7 @@ jobs:
       name: ${{ github.event.inputs.environment }}
 
     outputs:
-          imageUri: ${{ steps.build-vm-image.outputs.imageUri }}
+          imageUri: ${{ steps.build-vm-image.outputs.custom-image-uri }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
