@@ -122,7 +122,7 @@ jobs:
           inlineScript: |
             az group create -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -l northeurope
             ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}"  --admin-username vmUserName --generate-ssh-keys --location northeurope \
-            --image "${{needs.build.outputs.image-uri}} " --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
+            --image "${{ needs.build.outputs.image-uri }} " --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
             az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
             echo "::set-output name=ipaddress::$ipaddr"
             
@@ -131,7 +131,7 @@ jobs:
         uses: actions/github-script@v3.1.1
         with:
           inlineScript: |
-            curl http://{{ steps.output.ipaddress}}
+            curl http://${{ steps.output.ipaddress}}
       
       - name: cleanup
         uses: azure/CLI@1.0.4
