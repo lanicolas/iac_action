@@ -135,11 +135,12 @@ jobs:
       - name: Test VM      
         uses: actions/github-script@v3.1.1
         with:
-          inlineScript: |            
-            curl http://${{ steps.create-vm.output.ipaddress }}                        
+          script: |            
+            curl http://${{ steps.create-vm.outputs.ipaddress }}                        
       
       - name: cleanup
         uses: azure/CLI@1.0.4
+        if: always()
         with:
           inlineScript: |
             az group delete -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -y
