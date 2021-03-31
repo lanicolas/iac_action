@@ -103,7 +103,12 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    
+    environment:
+      name: ${{ github.event.inputs.environment }}
+    
     needs: build
+    
     steps:
       - name: Azure Login
         uses: Azure/login@v1.1
