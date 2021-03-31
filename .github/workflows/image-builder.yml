@@ -133,9 +133,7 @@ jobs:
             echo "::set-output name=ipaddress::$ipaddr"
             
       - name: Test VM      
-        uses: actions/github-script@v3.1.1
-        with:
-          script: |
+        run: |
             echo "Deployment finished. Checking ${{ steps.create-vm.outputs.ipaddress }} output"
             echo -n "Warm up wait..."
             sleep 15
@@ -144,7 +142,6 @@ jobs:
       
       - name: cleanup
         uses: azure/CLI@1.0.4
-        if: always()
         with:
           inlineScript: |
             az group delete -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -y
