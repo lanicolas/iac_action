@@ -31,6 +31,7 @@ jobs:
 
     outputs:
           imageUri: ${{ steps.build-vm-image.outputs.custom-image-uri }}
+          ip: ${{ steps.create-vm.outputs.ipaddr }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -85,7 +86,7 @@ jobs:
 
             exit $errorState
 
-      - name: build-vm-image
+      - name: buildImage
         uses: azure/build-vm-image@v0
         with:        
           resource-group-name: '${{ github.event.inputs.resourceGroup }}'
@@ -100,6 +101,19 @@ jobs:
             echo '######### run install.sh'
             cd /opt/app
             sudo sh install.sh
+            
+      - name: create-vm
+        uses: Azure/cli@1.0.4
+        with:
+          inlineScript: |
+            echo ${{ steps.buildImage.outputs.custom-image-uri }}
+            az group create -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -l northeurope
+            
+            ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}"  --admin-username vmUserName --generate-ssh-keys --location northeurope \
+            --image ${{ steps.build-vm-image.outputs.custom-image-uri }} --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
+            
+            az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
+            echo "::set-output name=ipaddress::$ipaddr"
 
   test:
     runs-on: ubuntu-latest
@@ -114,23 +128,14 @@ jobs:
         uses: Azure/login@v1.1
         with:
           # Paste output of `az ad sp create-for-rbac` as value of secret variable: AZURE_CREDENTIALS
-          creds:  ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: create-vm
-        uses: Azure/cli@1.0.4
-        with:
-          inlineScript: |
-            az group create -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -l northeurope
-            ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}"  --admin-username vmUserName --generate-ssh-keys --location northeurope \
-            --image ${{needs.build.outputs.imageUri}} --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
-            az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
-            echo "::set-output name=ipaddress::$ipaddr"
-            
+          creds:  ${{ secrets.AZURE_CREDENTIALS }}          
       
       - name: test-vm
         uses: actions/github-script@v3.1.1
         with:
           inlineScript: |
+            echo Uri: ${{ needs.build.outputs.imageUri }}
+            echo ip: ${{ needs.build.outputs.ip }}
             curl http://${{ steps.output.ipaddress }}
       
       - name: cleanup
