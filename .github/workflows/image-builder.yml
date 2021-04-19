@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CD
+name: build-image-and-test
 
 # Controls when the action will run. 
 on:
@@ -14,10 +14,6 @@ on:
         description: 'Resource group name'
         required: true
         default: 'marketplace-poc03'
-      managedIdentity:
-        description: 'Managed Identity for creating the vm images'
-        required: true
-        default: 'aibBuiUserId1616749594'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -91,7 +87,7 @@ jobs:
         uses: azure/build-vm-image@v0
         with:        
           resource-group-name: '${{ github.event.inputs.resourceGroup }}'
-          managed-identity: '${{ github.event.inputs.managedIdentity }}'
+          managed-identity: '${{ secrets.IDENTITYFORVM }}'
           location: 'northeurope'
           source-os-type: 'linux'        
           source-image: Canonical:UbuntuServer:18.04-LTS:latest
