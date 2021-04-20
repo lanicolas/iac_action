@@ -32,7 +32,7 @@ then
     az ad sp delete --id $spId
 fi
 
-az ad sp create-for-rbac --name $adName --role contributor --scopes /subscriptions/$subscriptionID --sdk-auth >> ".$uniqueName.cred"
+credentials=$(az ad sp create-for-rbac --name $adName --role contributor --scopes /subscriptions/$subscriptionID --sdk-auth)
 
-echo -e "Credentials created. To see them, run the command:\n\tcat .$uniqueName.cred "
+echo -e "Credentials created, use the text below as a GitHub secret:\n\t$credentials"
 
