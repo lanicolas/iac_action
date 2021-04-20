@@ -1,5 +1,10 @@
 #!/bin/bash -e
 
+###############################################################################
+# This script must be run with admin rights, it creates the resource group and 
+# the Service Principal for running the environment preparation
+###############################################################################
+
 # constants
 _BLUE='\033[1;34m'
 _RED='\033[1;31m'

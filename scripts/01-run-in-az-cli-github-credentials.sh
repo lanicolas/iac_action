@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
 ###############################################################################
-# This script must be run with admin rights, it creates the resource group and 
-# the Service Principal for running the environment preparation
+# This script must be run with admin rights, it creates the service principal
+# that should be used as a secret in GitHub to run the actions
 ###############################################################################
 
 # constants
@@ -32,7 +32,7 @@ then
     az ad sp delete --id $spId
 fi
 
-credentials=$(az ad sp create-for-rbac --name $adName --role contributor --scopes /subscriptions/$subscriptionID --sdk-auth)
+export credentials=$(az ad sp create-for-rbac --name $adName --role contributor --scopes /subscriptions/$subscriptionID --sdk-auth)
 
-echo -e "Use this credentials in GitHub:\n$credentials"
+echo -e "Credentials created. To see them, run the command:\n\techo -e \"\$credentials\" "
 
