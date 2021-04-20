@@ -29,6 +29,7 @@ adName="github-$uniqueName"
 spId=$(az ad sp list --display-name "$adName" --query [].objectId -o tsv)
 if [[ -n "$spId" ]]
 then
+    echo -e "Principal $adName already exists.${_RED}This principal will be deleted before creating it again.${_NC}"
     az ad sp delete --id $spId
 fi
 

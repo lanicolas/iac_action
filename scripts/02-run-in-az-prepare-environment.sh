@@ -12,7 +12,8 @@ _NC='\033[0m'
 
 _FORMAT="$0 resourceGroupName"
 
-_BASENAME=aibBuiUserId
+# base name for the managed identity to create the VMs
+_BASENAME="aibBuiUserId"
 
 # arguments check
 if (( $# != 1 )); then
@@ -93,8 +94,9 @@ if [ -z $assignmentId ] ; then
 
     # grant role definition to the user assigned identity
     az role assignment create --assignee $imgBuilderCliId --role $roleId --scope /subscriptions/$subscriptionID/resourceGroups/$imageResourceGroup
-
-    
+  
 else
     echo "Assignment already exists. Skipping creation"
 fi
+
+echo "Resources created. The identity:\n${_BLUE}$identityName${_NC}\nhas been created and can be used as a secret in your Workflow to indicate the managed identity for VM image creation with Image Builder."
