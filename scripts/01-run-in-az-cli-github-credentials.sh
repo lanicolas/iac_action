@@ -34,5 +34,5 @@ fi
 
 credentials=$(az ad sp create-for-rbac --name $adName --role contributor --scopes /subscriptions/$subscriptionID --sdk-auth)
 
-echo -e "Credentials created, use the text below as a GitHub secret:\n\t$credentials"
+echo -e "Credentials created, use the text below as a GitHub secret:\n$credentials"
 
