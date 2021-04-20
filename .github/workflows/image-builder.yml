@@ -134,7 +134,7 @@ jobs:
             echo -n "Warm up wait..."
             sleep 15
             echo "calling http endpoint.."
-            curl http://${{ steps.create-vm.outputs.ipaddress }}                        
+            curl http://${{ steps.create-vm.outputs.ipaddress }}            
       
       - name: cleanup
         uses: azure/CLI@1.0.4
