@@ -32,7 +32,8 @@ then
     az ad sp delete --id $spId
 fi
 
-export credentials=$(az ad sp create-for-rbac --name $adName --role contributor --scopes /subscriptions/$subscriptionID --sdk-auth)
+credentials=$(az ad sp create-for-rbac --name $adName --role contributor --scopes /subscriptions/$subscriptionID --sdk-auth)
+export credentials
 
 echo -e "Credentials created. To see them, run the command:\n\techo -e \"\$credentials\" "
 
