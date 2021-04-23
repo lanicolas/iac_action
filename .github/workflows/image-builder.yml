@@ -18,7 +18,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build:
+  build-vm:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     
@@ -98,14 +98,35 @@ jobs:
             echo '######### run install.sh'
             cd /opt/app
             sudo sh install.sh
-            
+
+  build-template:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Bicep Build
+        id: bicep-build
+        uses: aliencube/bicep-build-actions@v0.3
+        with:
+          files: template/template.bicep
+      - name: Check the result
+        shell: bash
+        run: |
+          shopt -s globstar
+          ls -altR **/template*.*
+      - name: Upload template as artifact
+        uses: actions/upload-artifact@v2.2.3
+        with:
+          name: template
+          path: "**/template*.json"
+
   test:
     runs-on: ubuntu-latest
     
     environment:
       name: ${{ github.event.inputs.environment }}
     
-    needs: build
+    needs: [build-vm, build-template]
     
     steps:
       - name: Azure Login
@@ -123,7 +144,7 @@ jobs:
             az group create -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -l northeurope
             
             ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}"  --admin-username azureadmin --generate-ssh-keys --location northeurope \
-            --image ${{ needs.build.outputs.imageUri }} --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
+            --image ${{ needs.build-vm.outputs.imageUri }} --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
             
             az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
             echo "::set-output name=ipaddress::$ipaddr"
