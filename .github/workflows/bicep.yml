@@ -1,0 +1,43 @@
+# This is a basic workflow to help you get started with Actions
+
+name: build-image-and-test
+
+# Controls when the action will run. 
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment name'
+        required: true
+        default: 'jm-azure'
+      resourceGroup:
+        description: 'Resource group name'
+        required: true
+        default: 'marketplace-poc03'
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    
+    environment:
+      name: ${{ github.event.inputs.environment }}
+
+    outputs:
+          imageUri: ${{ steps.build-vm-image.outputs.custom-image-uri }}
+          ip: ${{ steps.create-vm.outputs.ipaddr }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+
+    - name: Bicep Build
+      uses: aliencube/bicep-build-actions@v0.3
+      with:
+        files: template/template.bicep
+    - name: Check the result
+      shell: bash
+      run: |
+        shopt -s globstar
+        ls -altR **/template*.*
