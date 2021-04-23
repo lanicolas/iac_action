@@ -30,7 +30,7 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-
+    - uses: actions/checkout@v2
     - name: Bicep Build
       id: bicep-build
       uses: aliencube/bicep-build-actions@v0.3
