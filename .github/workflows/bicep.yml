@@ -26,13 +26,13 @@ jobs:
       name: ${{ github.event.inputs.environment }}
 
     outputs:
-          imageUri: ${{ steps.build-vm-image.outputs.custom-image-uri }}
-          ip: ${{ steps.create-vm.outputs.ipaddr }}
+          ips: ${{ steps.bicep-build.outputs.ipaddr }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
 
     - name: Bicep Build
+      id: bicep-build
       uses: aliencube/bicep-build-actions@v0.3
       with:
         files: template/template.bicep
