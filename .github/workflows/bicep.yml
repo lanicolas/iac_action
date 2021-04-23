@@ -41,3 +41,9 @@ jobs:
       run: |
         shopt -s globstar
         ls -altR **/template*.*
+        cat template/template.json
+    - name: Upload template as artifact
+      uses: actions/upload-artifact@v2.2.3
+      with:
+        name: template
+        path: "**/template*.json"
