@@ -91,6 +91,7 @@ jobs:
           location: 'northeurope'
           source-os-type: 'linux'        
           source-image: Canonical:UbuntuServer:18.04-LTS:latest
+          dist-type: VHD
           customizer-script: |
             env
             mkdir /opt/app/
