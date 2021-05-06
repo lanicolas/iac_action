@@ -153,7 +153,7 @@ jobs:
 
             az group create -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -l northeurope
             
-            ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}"  --admin-username azureadmin --generate-ssh-keys --location northeurope \
+            ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}" --os-type Linux --use- --admin-username azureadmin --generate-ssh-keys --location northeurope \
             --image $image --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
             
             az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
