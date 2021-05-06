@@ -142,19 +142,19 @@ jobs:
         uses: Azure/cli@1.0.4
         with:
           inlineScript: |
-            echo ${{ steps.build-vm.outputs.imageUri }}
-            echo ${{ steps.build-vm.outputs.vhdUri }}
+            echo Image Uri: "${{ needs.build-vm.outputs.imageUri }}"
+            echo VHD Uri: "${{ needs.build-vm.outputs.vhdUri }}"
             
-            image=${{ steps.build-vm.outputs.imageUri }}
+            image="${{ needs.build-vm.outputs.imageUri }}"
             if [ -z "$image" ]
             then
-              image=${{ steps.build-vm.outputs.vhdUri }}
+              image="${{ needs.build-vm.outputs.vhdUri }}"
             fi
 
             az group create -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -l northeurope
             
             ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}"  --admin-username azureadmin --generate-ssh-keys --location northeurope \
-            --image ${{ needs.build-vm.outputs.imageUri }} --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
+            --image $image --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
             
             az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
             echo "::set-output name=ipaddress::$ipaddr"
