@@ -99,8 +99,9 @@ jobs:
             echo '######### run install.sh'
             cd /opt/app
             sudo sh install.sh
+            
       - name: Generate url artifact
-        run: !
+        run: |
           cd ${{ GITHUB.WORKSPACE }}/workflow-artifacts/
           echo "${{ steps.build-vm-image.outputs.custom-image-uri }}" > vhd.url
           
