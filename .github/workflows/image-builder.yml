@@ -144,13 +144,18 @@ jobs:
             echo Image Uri: "${{ needs.build-vm.outputs.imageUri }}"            
             image=$(echo "${{ needs.build-vm.outputs.imageUri }}"  | cut -d "?" -f1)
             echo $image
+            
+            groupName="app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
+            region="northeurope"
 
-            az group create -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -l northeurope
+            az group create -n $gropuName -l $region
             
-            ipaddr=$(az vm create --resource-group "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"  --name "app-vm-${{ GITHUB.RUN_NUMBER }}" --os-type Linux --use-unmanaged-disk --admin-username azureadmin --generate-ssh-keys --location northeurope \
-            --image $image --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
+            imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
             
-            az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g "app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
+            ipaddr=$(az vm create --resource-group $groupName --name "app-vm-${{ GITHUB.RUN_NUMBER }}" --admin-username azureadmin --generate-ssh-keys --location $region \
+            --image $imageId --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
+            
+            az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g $groupName
             echo "::set-output name=ipaddress::$ipaddr"
             
       - name: Test VM      
