@@ -101,16 +101,15 @@ jobs:
             sudo sh install.sh
             
       - name: Generate url artifact
-        run: |
-          cd ${{ GITHUB.WORKSPACE }}/workflow-artifacts/
-          echo "${{ steps.build-vm-image.outputs.custom-image-uri }}" > vhd.url
+        run: |          
+          echo "${{ steps.build-vm-image.outputs.custom-image-uri }}" > vhd-url.txt
           
       - name: Upload the url as a Build Artifact
         uses: actions/upload-artifact@v2.2.3
         with:
           name: vhd_uri
           # A file, directory or wildcard pattern that describes what to upload
-          path: "**/workflow-artifacts/vhd.url"
+          path: "vhd-url.txt"
 
   build-template:
     runs-on: ubuntu-latest
