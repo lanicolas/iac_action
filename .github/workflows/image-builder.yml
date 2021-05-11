@@ -14,6 +14,10 @@ on:
         description: 'Resource group name'
         required: true
         default: 'marketplace-poc03'
+      dist-type:
+        description: 'Image creation output, possible values: ManagedImage | SharedImageGallery | VHD'
+        required: true
+        default: 'VHD'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -48,7 +52,6 @@ jobs:
 
       - name: Check az providers and feature registration
         uses: azure/CLI@1.0.4
-        #if: ${{ false }}
         with:
           azcliversion: latest
           inlineScript: |
@@ -91,7 +94,7 @@ jobs:
           location: 'northeurope'
           source-os-type: 'linux'        
           source-image: Canonical:UbuntuServer:18.04-LTS:latest
-          dist-type: VHD
+          dist-type: '${{ dist-type }}'
           customizer-script: |
             env
             mkdir /opt/app/
@@ -101,11 +104,13 @@ jobs:
             sudo sh install.sh
             
       - name: Generate url artifact
+        if: dist-type == 'VHD'
         run: |          
           echo "${{ steps.build-vm-image.outputs.custom-image-uri }}" > vhd-url.txt
           
       - name: Upload the url as a Build Artifact
         uses: actions/upload-artifact@v2.2.3
+        if: dist-type == 'VHD'
         with:
           name: vhd_uri
           # A file, directory or wildcard pattern that describes what to upload
@@ -161,7 +166,11 @@ jobs:
 
             az group create -n $groupName -l $region
             
-            imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
+            if[ '${{dist-type}}' == 'VHD' ]
+              imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
+            else
+              imageId = '$image'
+            fi
             
             ipaddr=$(az vm create --resource-group $groupName --name "app-vm-${{ GITHUB.RUN_NUMBER }}" --admin-username azureadmin --generate-ssh-keys --location $region \
             --image $imageId --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
