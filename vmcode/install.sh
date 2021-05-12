@@ -6,5 +6,5 @@ sh get-docker.sh
 
 apt-get install -y docker-compose 
 
-echo Run compose and start the web server
+echo Run compose and start the Nginx web server 
 docker-compose up -d
