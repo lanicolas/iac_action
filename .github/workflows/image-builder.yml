@@ -94,7 +94,7 @@ jobs:
           location: 'northeurope'
           source-os-type: 'linux'        
           source-image: Canonical:UbuntuServer:18.04-LTS:latest
-          dist-type: '${{ dist-type }}'
+          dist-type: '${{ github.event.inputs.dist-type }}'
           customizer-script: |
             env
             mkdir /opt/app/
@@ -104,13 +104,13 @@ jobs:
             sudo sh install.sh
             
       - name: Generate url artifact
-        if: dist-type == 'VHD'
+        if: github.event.inputs.dist-type == 'VHD'
         run: |          
           echo "${{ steps.build-vm-image.outputs.custom-image-uri }}" > vhd-url.txt
           
       - name: Upload the url as a Build Artifact
         uses: actions/upload-artifact@v2.2.3
-        if: dist-type == 'VHD'
+        if: github.event.inputs.dist-type == 'VHD'
         with:
           name: vhd_uri
           # A file, directory or wildcard pattern that describes what to upload
@@ -166,7 +166,7 @@ jobs:
 
             az group create -n $groupName -l $region
             
-            if[ '${{dist-type}}' == 'VHD' ]
+            if[ '${{github.event.inputs.dist-type}}' == 'VHD' ]
               imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
             else
               imageId = '$image'
