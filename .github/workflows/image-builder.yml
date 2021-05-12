@@ -166,7 +166,7 @@ jobs:
 
             az group create -n $groupName -l $region
             
-            if[ '${{github.event.inputs.dist-type}}' == 'VHD' ]
+            if [ '${{ github.event.inputs.dist-type }}' = 'VHD' ]; then
               imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
             else
               imageId = '$image'
