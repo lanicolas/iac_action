@@ -1,5 +1,7 @@
 # Creating Azure Marketplace Virtual Machine Images [DRAFT]
 
+[![Build image, template and test](https://github.com/jmservera/azure-markeplace-vm-image-demo/actions/workflows/image-builder.yml/badge.svg?branch=2.1-image-builder-bicep)](https://github.com/jmservera/azure-markeplace-vm-image-demo/actions/workflows/image-builder.yml)
+
 This is a demo of how to create a virtual machine image to publish it in the Azure Marketplace, or in your [Image Gallery][image-gallery]. It demonstrates how to automate the creation of your image as a GitHub Workflow using GitHub Actions, and uses the [Azure Image Builder][image-builder] service to make the image creation easier.
 
 ## Preparation steps
