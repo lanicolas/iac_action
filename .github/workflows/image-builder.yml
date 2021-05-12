@@ -156,20 +156,17 @@ jobs:
         id: create-vm-from-image
         uses: Azure/cli@1.0.4
         with:
-          inlineScript: |
-            echo Image Uri: "${{ needs.build-vm.outputs.imageUri }}"            
-            image=$(echo "${{ needs.build-vm.outputs.imageUri }}"  | cut -d "?" -f1)
-            echo $image
-            
+          inlineScript: |                       
             groupName="app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
             region="northeurope"
 
             az group create -n $groupName -l $region
             
             if [ '${{ github.event.inputs.dist-type }}' = 'VHD' ]; then
+              image=$(echo "${{ needs.build-vm.outputs.imageUri }}"  | cut -d "?" -f1)
               imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
             else
-              imageId = '$image'
+              imageId = '${{ needs.build-vm.outputs.imageUri }}'
             fi
             
             ipaddr=$(az vm create --resource-group $groupName --name "app-vm-${{ GITHUB.RUN_NUMBER }}" --admin-username azureadmin --generate-ssh-keys --location $region \
