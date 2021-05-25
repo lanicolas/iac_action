@@ -9,11 +9,11 @@ on:
       environment:
         description: 'Environment name'
         required: true
-        default: 'jm-azure'
+        default: 'IaC-azure'
       resourceGroup:
         description: 'Resource group name'
         required: true
-        default: 'marketplace-poc03'
+        default: 'IaCworkshop'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
