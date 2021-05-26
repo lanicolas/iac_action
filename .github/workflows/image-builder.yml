@@ -9,7 +9,11 @@ on:
       environment:
         description: 'Environment name'
         required: true
-        default: 'jm-azure'
+        default: 'iac'
+      location:
+        description: 'Azure Region Location'
+        required: true
+        default: 'westeurope'
       resourceGroup:
         description: 'Resource group name'
         required: true
@@ -91,7 +95,7 @@ jobs:
         with:        
           resource-group-name: '${{ github.event.inputs.resourceGroup }}'
           managed-identity: '${{ secrets.IDENTITYFORVM }}'
-          location: 'northeurope'
+          location: '${{ github.event.inputs.location }}'
           source-os-type: 'linux'        
           source-image: Canonical:UbuntuServer:18.04-LTS:latest
           dist-type: '${{ github.event.inputs.dist-type }}'
@@ -158,7 +162,7 @@ jobs:
         with:
           inlineScript: |                       
             groupName="app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
-            region="northeurope"
+            region=${{ github.event.inputs.location }}
 
             az group create -n $groupName -l $region
             
