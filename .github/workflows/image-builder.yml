@@ -17,7 +17,7 @@ on:
       resourceGroup:
         description: 'Resource group name'
         required: true
-        default: 'IaCworkshop'
+        default: 'IaC'
       dist-type:
         description: 'Image creation output, possible values: ManagedImage | SharedImageGallery | VHD'
         required: true
