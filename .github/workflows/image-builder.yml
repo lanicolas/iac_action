@@ -9,7 +9,7 @@ on:
       environment:
         description: 'Environment name'
         required: true
-        default: 'IaC-azure'
+        default: 'iac-azure'
       location:
         description: 'Azure Region Location'
         required: true
@@ -17,7 +17,7 @@ on:
       resourceGroup:
         description: 'Resource group name'
         required: true
-        default: 'IaC'
+        default: 'iac'
       dist-type:
         description: 'Image creation output, possible values: ManagedImage | SharedImageGallery | VHD'
         required: true
