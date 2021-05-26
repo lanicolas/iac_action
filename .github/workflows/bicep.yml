@@ -9,7 +9,7 @@ on:
       environment:
         description: 'Environment name'
         required: true
-        default: 'iac-azure'
+        default: 'iac'
       resourceGroup:
         description: 'Resource group name'
         required: true
