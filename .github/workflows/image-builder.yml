@@ -95,7 +95,7 @@ jobs:
         with:        
           resource-group-name: '${{ github.event.inputs.resourceGroup }}'
           managed-identity: '${{ secrets.IDENTITYFORVM }}'
-          location: '${{ github.event.inputs.location }}'
+          location: 'westeurope'
           source-os-type: 'linux'        
           source-image: Canonical:UbuntuServer:18.04-LTS:latest
           dist-type: '${{ github.event.inputs.dist-type }}'
