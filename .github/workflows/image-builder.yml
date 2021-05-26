@@ -20,171 +20,37 @@ on:
         default: 'VHD'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
-jobs:
-  # This workflow contains a single job called "build"
-  build-vm:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    
-    environment:
-      name: ${{ github.event.inputs.environment }}
+  jobs:
+      BUILD-CUSTOM-IMAGE:
+        runs-on: ubuntu-latest    
+        environment:
+          name: ${{ github.event.inputs.environment }}
+        
+        steps:
+        - name: Checkout
+          uses: actions/checkout@v2    
 
-    outputs:
-          imageUri: ${{ steps.build-vm-image.outputs.custom-image-uri }}
-          ip: ${{ steps.create-vm.outputs.ipaddr }}
+        - name: Login via Az module
+          uses: azure/login@v1
+          with:
+              creds: ${{secrets.AZURE_CREDENTIALS}}
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+        - name: CREATE APP BAKED VM IMAGE
+          id: imageBuilder
+          uses: azure/build-vm-image@v0
+          with:
+            location: 'westeurope'
+            resource-group-name: 'iac'
+            managed-identity: '${{ secrets.IDENTITYFORVM }}'
 
-      - name: Create Workflow Artifacts
-        run: |
-          cd  ${{ GITHUB.WORKSPACE }}
-          mkdir workflow-artifacts/        
-          cp -r ${{ GITHUB.WORKSPACE }}/vmcode/* ${{ GITHUB.WORKSPACE }}/workflow-artifacts/
-          
-      - name: Azure Login
-        uses: Azure/login@v1.1
-        with:
-          # Paste output of `az ad sp create-for-rbac` as value of secret variable: AZURE_CREDENTIALS
-          creds:  ${{ secrets.AZURE_CREDENTIALS }}
+            source-os-type: 'linux'
+            source-image-type: 'VHD'
+            source-image: Canonical:UbuntuServer:18.04-LTS:latest #unique  identitifier of source image
+            customizer-script: |
+              env
+              mkdir /opt/app/
+              cp -r /tmp/workflow-artifacts/* /opt/app/
+              echo '######### run install.sh'
+              cd /opt/app
+              sudo sh install.sh
 
-      - name: Check az providers and feature registration
-        uses: azure/CLI@1.0.4
-        with:
-          azcliversion: latest
-          inlineScript: |
-            #constants
-            BLUE='\033[1;34m'
-            RED='\033[1;31m'
-            NC='\033[0m'
-            errorState=0
-
-            # Check provider list
-            providers=("Microsoft.VirtualMachineImages" "Microsoft.KeyVault" "Microsoft.Compute" "Microsoft.Storage" "Microsoft.Network")
-            for provider in ${providers[@]}; do
-              state=$(az provider show --namespace ${provider} -o tsv --query registrationState)
-              if [ $state != 'Registered' ]; then
-                      echo -e "::error::Account not registered for provider ${provider}\nPlease run this in your account:\n\t${BLUE}az provider register --namespace ${provider}${NC}"
-                      errorState=1
-              else
-                      echo "::debug::Provider ${provider} registered!"
-              fi
-            done
-
-            #check vm template feature (needed because it's still in preview)
-
-            state=$(az feature show --namespace Microsoft.VirtualMachineImages --name VirtualMachineTemplatePreview -o tsv --query properties.state)
-            if [ $state != 'Registered' ]; then
-                    echo -e "::error::Account not registered for VirtualMachineTemplatePreview\nPlease run this in your account:\n\t${BLUE}az feature register --namespace Microsoft.VirtualMachineImages --name VirtualMachineTemplatePreview${NC}"
-                    errorState=1
-            else
-                    echo "::debug::Feature registered!"
-            fi
-
-            exit $errorState
-
-      - name: Build VM Image
-        id: build-vm-image
-        uses: azure/build-vm-image@v0
-        with:        
-          resource-group-name: '${{ github.event.inputs.resourceGroup }}'
-          managed-identity: '${{ secrets.IDENTITYFORVM }}'
-          location: 'westeurope'
-          source-os-type: 'linux'        
-          source-image: Canonical:UbuntuServer:18.04-LTS:latest
-          dist-type: '${{ github.event.inputs.dist-type }}'
-          customizer-script: |
-            env
-            mkdir /opt/app/
-            cp -r /tmp/workflow-artifacts/* /opt/app/
-            echo '######### run install.sh'
-            cd /opt/app
-            sudo sh install.sh
-            
-      - name: Generate url artifact
-        if: github.event.inputs.dist-type == 'VHD'
-        run: |          
-          echo "${{ steps.build-vm-image.outputs.custom-image-uri }}" > vhd-url.txt
-          
-      - name: Upload the url as a Build Artifact
-        uses: actions/upload-artifact@v2.2.3
-        if: github.event.inputs.dist-type == 'VHD'
-        with:
-          name: vhd_uri
-          # A file, directory or wildcard pattern that describes what to upload
-          path: "vhd-url.txt"
-
-  build-template:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Bicep Build
-        id: bicep-build
-        uses: aliencube/bicep-build-actions@v0.3
-        with:
-          files: template/template.bicep
-      - name: Check the result
-        shell: bash
-        run: |
-          shopt -s globstar
-          ls -altR **/template*.*
-      - name: Upload template as artifact
-        uses: actions/upload-artifact@v2.2.3
-        with:
-          name: template
-          path: "**/template*.json"
-
-  test:
-    runs-on: ubuntu-latest
-    
-    environment:
-      name: ${{ github.event.inputs.environment }}
-    
-    needs: [build-vm, build-template]
-    
-    steps:
-      - name: Azure Login
-        uses: Azure/login@v1.1
-        with:
-          # Paste output of `az ad sp create-for-rbac` as value of secret variable: AZURE_CREDENTIALS
-          creds:  ${{ secrets.AZURE_CREDENTIALS }}          
-      
-      - name: Create VM From Image
-        id: create-vm-from-image
-        uses: Azure/cli@1.0.4
-        with:
-          inlineScript: |     
-            groupName="app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
-            region="westeurope"
-
-            az group create -n $groupName -l $region
-            
-            if [ '${{ github.event.inputs.dist-type }}' = 'VHD' ]; then
-              image=$(echo "${{ needs.build-vm.outputs.imageUri }}"  | cut -d "?" -f1)
-              imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
-            else
-              imageId="${{ needs.build-vm.outputs.imageUri }}"
-            fi
-            
-            ipaddr=$(az vm create --resource-group $groupName --name "app-vm-${{ GITHUB.RUN_NUMBER }}" --admin-username azureadmin --generate-ssh-keys --location $region \
-            --image $imageId --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
-            
-            az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g $groupName
-            echo "::set-output name=ipaddress::$ipaddr"
-            
-      - name: Test VM      
-        run: |
-            echo "Deployment finished. Checking ${{ steps.create-vm-from-image.outputs.ipaddress }} output"
-            echo -n "Warm up wait..."
-            sleep 15
-            echo "calling http endpoint.."
-            curl http://${{ steps.create-vm-from-image.outputs.ipaddress }}            
-      
-      - name: cleanup
-        uses: azure/CLI@1.0.4
-        with:
-          inlineScript: |
-            az group delete -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -y
