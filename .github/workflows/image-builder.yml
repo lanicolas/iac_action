@@ -9,11 +9,7 @@ on:
       environment:
         description: 'Environment name'
         required: true
-        default: 'iac-azure'
-      location:
-        description: 'Azure Region Location'
-        required: true
-        default: 'westeurope'
+        default: 'jm-azure'
       resourceGroup:
         description: 'Resource group name'
         required: true
@@ -89,7 +85,6 @@ jobs:
 
             exit $errorState
 
- 
       - name: Build VM Image
         id: build-vm-image
         uses: azure/build-vm-image@v0
@@ -120,3 +115,76 @@ jobs:
           name: vhd_uri
           # A file, directory or wildcard pattern that describes what to upload
           path: "vhd-url.txt"
+
+  build-template:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Bicep Build
+        id: bicep-build
+        uses: aliencube/bicep-build-actions@v0.3
+        with:
+          files: template/template.bicep
+      - name: Check the result
+        shell: bash
+        run: |
+          shopt -s globstar
+          ls -altR **/template*.*
+      - name: Upload template as artifact
+        uses: actions/upload-artifact@v2.2.3
+        with:
+          name: template
+          path: "**/template*.json"
+
+  test:
+    runs-on: ubuntu-latest
+    
+    environment:
+      name: ${{ github.event.inputs.environment }}
+    
+    needs: [build-vm, build-template]
+    
+    steps:
+      - name: Azure Login
+        uses: Azure/login@v1.1
+        with:
+          # Paste output of `az ad sp create-for-rbac` as value of secret variable: AZURE_CREDENTIALS
+          creds:  ${{ secrets.AZURE_CREDENTIALS }}          
+      
+      - name: Create VM From Image
+        id: create-vm-from-image
+        uses: Azure/cli@1.0.4
+        with:
+          inlineScript: |                       
+            groupName="app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
+            region="northeurope"
+
+            az group create -n $groupName -l $region
+            
+            if [ '${{ github.event.inputs.dist-type }}' = 'VHD' ]; then
+              image=$(echo "${{ needs.build-vm.outputs.imageUri }}"  | cut -d "?" -f1)
+              imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
+            else
+              imageId="${{ needs.build-vm.outputs.imageUri }}"
+            fi
+            
+            ipaddr=$(az vm create --resource-group $groupName --name "app-vm-${{ GITHUB.RUN_NUMBER }}" --admin-username azureadmin --generate-ssh-keys --location $region \
+            --image $imageId --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
+            
+            az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g $groupName
+            echo "::set-output name=ipaddress::$ipaddr"
+            
+      - name: Test VM      
+        run: |
+            echo "Deployment finished. Checking ${{ steps.create-vm-from-image.outputs.ipaddress }} output"
+            echo -n "Warm up wait..."
+            sleep 15
+            echo "calling http endpoint.."
+            curl http://${{ steps.create-vm-from-image.outputs.ipaddress }}            
+      
+      - name: cleanup
+        uses: azure/CLI@1.0.4
+        with:
+          inlineScript: |
+            az group delete -n "app-vm-grp-${{ GITHUB.RUN_NUMBER }}" -y
