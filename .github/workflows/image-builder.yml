@@ -91,7 +91,7 @@ jobs:
         with:        
           resource-group-name: '${{ github.event.inputs.resourceGroup }}'
           managed-identity: '${{ secrets.IDENTITYFORVM }}'
-          location: 'northeurope'
+          location: 'westeurope'
           source-os-type: 'linux'        
           source-image: Canonical:UbuntuServer:18.04-LTS:latest
           dist-type: '${{ github.event.inputs.dist-type }}'
@@ -156,9 +156,9 @@ jobs:
         id: create-vm-from-image
         uses: Azure/cli@1.0.4
         with:
-          inlineScript: |                       
+          inlineScript: |     
             groupName="app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
-            region="northeurope"
+            region="westeurope"
 
             az group create -n $groupName -l $region
             
