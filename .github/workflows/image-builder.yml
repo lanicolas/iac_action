@@ -20,7 +20,7 @@ on:
         default: 'VHD'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
-  jobs:
+jobs:
       BUILD-CUSTOM-IMAGE:
         runs-on: ubuntu-latest    
         environment:
