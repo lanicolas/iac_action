@@ -18,39 +18,70 @@ on:
         description: 'Image creation output, possible values: ManagedImage | SharedImageGallery | VHD'
         required: true
         default: 'VHD'
-
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-      BUILD-CUSTOM-IMAGE:
-        runs-on: ubuntu-latest    
-        environment:
-          name: ${{ github.event.inputs.environment }}
-        
-        steps:
-        - name: Checkout
-          uses: actions/checkout@v2    
+  # This workflow contains a single job called "build"
+  build-vm:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2    
+      - name: Login via Az module
+        uses: azure/login@v1
+        with:
+          creds: ${{secrets.AZURE_CREDENTIALS}}
+      - name: Check az providers and feature registration
+        uses: azure/CLI@1.0.4
+        with:
+          azcliversion: latest
+          inlineScript: |
+            #constants
+            BLUE='\033[1;34m'
+            RED='\033[1;31m'
+            NC='\033[0m'
+            errorState=0
 
-        - name: Login via Az module
-          uses: azure/login@v1
-          with:
-              creds: ${{secrets.AZURE_CREDENTIALS}}
+            # Check provider list
+            providers=("Microsoft.VirtualMachineImages" "Microsoft.KeyVault" "Microsoft.Compute" "Microsoft.Storage" "Microsoft.Network")
+            for provider in ${providers[@]}; do
+              state=$(az provider show --namespace ${provider} -o tsv --query registrationState)
+              if [ $state != 'Registered' ]; then
+                      echo -e "::error::Account not registered for provider ${provider}\nPlease run this in your account:\n\t${BLUE}az provider register --namespace ${provider}${NC}"
+                      errorState=1
+              else
+                      echo "::debug::Provider ${provider} registered!"
+              fi
+            done
 
-        - name: CREATE APP BAKED VM IMAGE
-          id: imageBuilder
-          uses: azure/build-vm-image@v0
-          with:
-            location: 'westeurope'
-            resource-group-name: 'iac'
-            managed-identity: '${{ secrets.IDENTITYFORVM }}'
+            #check vm template feature (needed because it's still in preview)
 
-            source-os-type: 'linux'
-            source-image-type: 'VHD'
-            source-image: Canonical:UbuntuServer:18.04-LTS:latest #unique  identitifier of source image
-            customizer-script: |
-              env
-              mkdir /opt/app/
-              cp -r /tmp/workflow-artifacts/* /opt/app/
-              echo '######### run install.sh'
-              cd /opt/app
-              sudo sh install.sh
+            state=$(az feature show --namespace Microsoft.VirtualMachineImages --name VirtualMachineTemplatePreview -o tsv --query properties.state)
+            if [ $state != 'Registered' ]; then
+                    echo -e "::error::Account not registered for VirtualMachineTemplatePreview\nPlease run this in your account:\n\t${BLUE}az feature register --namespace Microsoft.VirtualMachineImages --name VirtualMachineTemplatePreview${NC}"
+                    errorState=1
+            else
+                    echo "::debug::Feature registered!"
+            fi
+
+            exit $errorState
+      - name: CREATE APP BAKED VM IMAGE
+        id: imageBuilder
+        uses: azure/build-vm-image@v0
+        with:
+          location: 'westeurope'
+          resource-group-name: 'iac'
+          managed-identity: '${{ secrets.IDENTITYFORVM }}'
+          source-os-type: 'linux'
+          source-image-type: 'VHD'
+          source-image: Canonical:UbuntuServer:18.04-LTS:latest #unique  identitifier of source image
+          customizer-script: |
+            env
+            mkdir /opt/app/
+            cp -r /tmp/workflow-artifacts/* /opt/app/
+            echo '######### run install.sh'
+            cd /opt/app
+            sudo sh install.sh
 
