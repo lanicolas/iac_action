@@ -28,9 +28,6 @@ jobs:
     outputs:
           ip: ${{ steps.create-vm.outputs.ipaddr }}
           
-  build-template:
-    runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - name: Bicep Build
@@ -55,7 +52,7 @@ jobs:
     environment:
       name: ${{ github.event.inputs.environment }}
     
-    needs: [build-vm, build-template]
+    needs: [build-vm]
     
     steps:
       - name: Azure Login
