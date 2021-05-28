@@ -160,9 +160,11 @@ jobs:
         id: create-vm-from-image
         uses: Azure/cli@1.0.4
         with:
+          resource-group: '${{ github.event.inputs.resourceGroup }}'
+          location: '${{ github.event.inputs.location }}'
           inlineScript: |                       
-            groupName=${{ github.event.inputs.resourceGroup }}
-            region=${{ github.event.inputs.location }}
+            groupName='${{ github.event.inputs.resourceGroup }}'
+            region='${{ github.event.inputs.location }}'
 
             az group create -n $groupName -l $region
             
@@ -176,7 +178,7 @@ jobs:
             ipaddr=$(az vm create --resource-group $groupName --name "app-vm-${{ GITHUB.RUN_NUMBER }}" --admin-username azureadmin --generate-ssh-keys --location $region \
             --image $imageId --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
             
-            az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g $groupName
+            az vm open-port --port 80 -n "Port80" -g $groupName
             echo "::set-output name=ipaddress::$ipaddr"
             
       - name: Test VM      
