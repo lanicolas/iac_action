@@ -18,6 +18,10 @@ on:
         description: 'Azure Region'
         required: true
         default: 'westeurope'
+      vmname:
+        description: 'Name for Azure VM'
+        required: true
+        default: 'iac-vm'
       dist-type:
         description: 'Image creation output, possible values: ManagedImage | SharedImageGallery | VHD'
         required: true
@@ -162,19 +166,17 @@ jobs:
         with:
           resource-group: '${{ github.event.inputs.resourceGroup }}'
           location: '${{ github.event.inputs.location }}'
+          vmname: '${{ github.event.inputs.vmname }}'
           inlineScript: |                       
             groupName='${{ github.event.inputs.resourceGroup }}'
             region='${{ github.event.inputs.location }}'
+            vmname='${{ github.event.inputs.vmname }}'
             
-            echo "printing variables"
-            echo $groupName
-            echo $region
-
-            az group create -n $groupName -l $region
+             az group create -n $groupName -l $region
             
             if [ '${{ github.event.inputs.dist-type }}' = 'VHD' ]; then
               image=$(echo "${{ needs.build-vm.outputs.imageUri }}"  | cut -d "?" -f1)
-              imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
+              imageId=$(az image create --name $vnmname --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
             else
               imageId="${{ needs.build-vm.outputs.imageUri }}"
             fi
@@ -182,7 +184,7 @@ jobs:
             ipaddr=$(az vm create --resource-group $groupName --name $groupName --admin-username azureadmin --generate-ssh-keys --location $region \
             --image $imageId --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
             
-            az vm open-port --port 80 -n "Port80" -g $groupName
+            az vm open-port --port 80 -n $vmname -g $groupName
             echo "::set-output name=ipaddress::$ipaddr"
             
       - name: Test VM      
