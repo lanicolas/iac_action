@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: build-image-and-test
+name: build-image
 
 # Controls when the action will run. 
 on:
@@ -10,6 +10,10 @@ on:
         description: 'Environment name'
         required: true
         default: 'iac'
+      location:
+        description: 'Azure Region'
+        required: true
+        default: 'westeurope'
       resourceGroup:
         description: 'Resource group name'
         required: true
@@ -22,7 +26,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build-vm:
+  build-image:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     
@@ -30,7 +34,7 @@ jobs:
       name: ${{ github.event.inputs.environment }}
 
     outputs:
-          imageUri: ${{ steps.build-vm-image.outputs.custom-image-uri }}
+          imageUri: ${{ steps.build-image.outputs.custom-image-uri }}
           ip: ${{ steps.create-vm.outputs.ipaddr }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -86,12 +90,12 @@ jobs:
             exit $errorState
 
       - name: Build VM Image
-        id: build-vm-image
+        id: build-image
         uses: azure/build-vm-image@v0
         with:        
           resource-group-name: '${{ github.event.inputs.resourceGroup }}'
           managed-identity: '${{ secrets.IDENTITYFORVM }}'
-          location: 'westeurope'
+          location: '${{ github.event.inputs.location }}'
           source-os-type: 'linux'        
           source-image: Canonical:UbuntuServer:18.04-LTS:latest
           dist-type: '${{ github.event.inputs.dist-type }}'
@@ -106,7 +110,7 @@ jobs:
       - name: Generate url artifact
         if: github.event.inputs.dist-type == 'VHD'
         run: |          
-          echo "${{ steps.build-vm-image.outputs.custom-image-uri }}" > vhd-url.txt
+          echo "${{ steps.build-image.outputs.custom-image-uri }}" > vhd-url.txt
           
       - name: Upload the url as a Build Artifact
         uses: actions/upload-artifact@v2.2.3
@@ -150,7 +154,7 @@ jobs:
     environment:
       name: ${{ github.event.inputs.environment }}
     
-    needs: [build-vm]
+    needs: [build-image]
     
     steps:
       - name: Azure Login
@@ -158,22 +162,21 @@ jobs:
         with:
           # Paste output of `az ad sp create-for-rbac` as value of secret variable: AZURE_CREDENTIALS
           creds:  ${{ secrets.AZURE_CREDENTIALS }}          
-      
       - name: Create VM From Image
         id: create-vm-from-image
         uses: Azure/cli@1.0.4
         with:
           inlineScript: |                       
             groupName="app-vm-grp-${{ GITHUB.RUN_NUMBER }}"
-            region="northeurope"
+            region=${{ github.event.inputs.location }}
 
             az group create -n $groupName -l $region
             
-            if [ '${{ github.event.inputs.dist-type }}' = 'VHD' ]; then
-              image=$(echo "${{ needs.build-vm.outputs.imageUri }}"  | cut -d "?" -f1)
+            if [ '${{ steps.build-image.outputs.custom-image-uri }}' = 'VHD' ]; then
+              image=$(echo "${{ needs.build-image.outputs.imageUri }}"  | cut -d "?" -f1)
               imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
             else
-              imageId="${{ needs.build-vm.outputs.imageUri }}"
+              imageId="${{ needs.build-image.outputs.imageUri }}"
             fi
             
             ipaddr=$(az vm create --resource-group $groupName --name "app-vm-${{ GITHUB.RUN_NUMBER }}" --admin-username azureadmin --generate-ssh-keys --location $region \
