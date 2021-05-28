@@ -165,6 +165,10 @@ jobs:
           inlineScript: |                       
             groupName='${{ github.event.inputs.resourceGroup }}'
             region='${{ github.event.inputs.location }}'
+            
+            echo "printing variables"
+            echo $groupName
+            echo $region
 
             az group create -n $groupName -l $region
             
