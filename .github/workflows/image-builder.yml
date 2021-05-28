@@ -91,12 +91,8 @@ jobs:
                     echo "::debug::Feature registered!"
             fi
             
-            $rsgExists = az group exists -n $groupName
-            if ($rsgExists -eq 'false') {
+
             az group create -n $groupName -l $region
-            }
-            
-            exit $errorState
 
       - name: Build VM Image
         id: build-vm-image
