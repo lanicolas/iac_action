@@ -58,7 +58,7 @@ jobs:
           # Paste output of `az ad sp create-for-rbac` as value of secret variable: AZURE_CREDENTIALS
           creds:  ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Check az providers and feature registration
+      - name: Check az providers and Resource Group creation 
         uses: azure/CLI@1.0.4
         with:
           azcliversion: latest
@@ -90,7 +90,12 @@ jobs:
             else
                     echo "::debug::Feature registered!"
             fi
-
+            
+            $rsgExists = az group exists -n $groupName
+            if ($rsgExists -eq 'false') {
+            az group create -n $groupName -l $region
+            }
+            
             exit $errorState
 
       - name: Build VM Image
@@ -172,8 +177,7 @@ jobs:
             region='${{ github.event.inputs.location }}'
             vmname='${{ github.event.inputs.vmname }}'
             
-             az group create -n $groupName -l $region
-            
+                        
             if [ '${{ github.event.inputs.dist-type }}' = 'VHD' ]; then
               image=$(echo "${{ needs.build-vm.outputs.imageUri }}"  | cut -d "?" -f1)
               imageId=$(az image create --name $vnmname --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
