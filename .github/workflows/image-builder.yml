@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: build-image
+name: build-image-and-test
 
 # Controls when the action will run. 
 on:
@@ -10,14 +10,14 @@ on:
         description: 'Environment name'
         required: true
         default: 'iac'
-      location:
-        description: 'Azure Region'
-        required: true
-        default: 'westeurope'
       resourceGroup:
         description: 'Resource group name'
         required: true
         default: 'iac'
+      location:
+        description: 'Azure Region'
+        required: true
+        default: 'westeurope'
       dist-type:
         description: 'Image creation output, possible values: ManagedImage | SharedImageGallery | VHD'
         required: true
@@ -26,7 +26,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build-image:
+  build-vm:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     
@@ -34,7 +34,7 @@ jobs:
       name: ${{ github.event.inputs.environment }}
 
     outputs:
-          imageUri: ${{ steps.build-image.outputs.custom-image-uri }}
+          imageUri: ${{ steps.build-vm-image.outputs.custom-image-uri }}
           ip: ${{ steps.create-vm.outputs.ipaddr }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -90,7 +90,7 @@ jobs:
             exit $errorState
 
       - name: Build VM Image
-        id: build-image
+        id: build-vm-image
         uses: azure/build-vm-image@v0
         with:        
           resource-group-name: '${{ github.event.inputs.resourceGroup }}'
@@ -110,7 +110,7 @@ jobs:
       - name: Generate url artifact
         if: github.event.inputs.dist-type == 'VHD'
         run: |          
-          echo "${{ steps.build-image.outputs.custom-image-uri }}" > vhd-url.txt
+          echo "${{ steps.build-vm-image.outputs.custom-image-uri }}" > vhd-url.txt
           
       - name: Upload the url as a Build Artifact
         uses: actions/upload-artifact@v2.2.3
@@ -120,16 +120,9 @@ jobs:
           # A file, directory or wildcard pattern that describes what to upload
           path: "vhd-url.txt"
 
-  deploy-vm:
-    # The type of runner that the job will run on
+  build-template:
     runs-on: ubuntu-latest
-    
-    environment:
-      name: ${{ github.event.inputs.environment }}
 
-    outputs:
-          ip: ${{ steps.create-vm.outputs.ipaddr }}
-          
     steps:
       - uses: actions/checkout@v2
       - name: Bicep Build
@@ -148,13 +141,13 @@ jobs:
           name: template
           path: "**/template*.json"
 
-  create-vm:
+  test:
     runs-on: ubuntu-latest
     
     environment:
       name: ${{ github.event.inputs.environment }}
     
-    needs: [build-image]
+    needs: [build-vm, build-template]
     
     steps:
       - name: Azure Login
@@ -162,6 +155,7 @@ jobs:
         with:
           # Paste output of `az ad sp create-for-rbac` as value of secret variable: AZURE_CREDENTIALS
           creds:  ${{ secrets.AZURE_CREDENTIALS }}          
+      
       - name: Create VM From Image
         id: create-vm-from-image
         uses: Azure/cli@1.0.4
@@ -171,21 +165,21 @@ jobs:
             region=${{ github.event.inputs.location }}
 
             az group create -n $groupName -l $region
-            echo '${{ steps.build-image.outputs.custom-image-uri }}'
-            if [ '${{ steps.build-image.outputs.custom-image-uri }}' = 'VHD' ]; then
-              image=$(echo "${{ needs.build-image.outputs.imageUri }}"  | cut -d "?" -f1)
+            
+            if [ '${{ github.event.inputs.dist-type }}' = 'VHD' ]; then
+              image=$(echo "${{ needs.build-vm.outputs.imageUri }}"  | cut -d "?" -f1)
               imageId=$(az image create --name "img-${{ GITHUB.RUN_NUMBER }}" --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
             else
-              imageId="${{ needs.build-image.outputs.imageUri }}"
+              imageId="${{ needs.build-vm.outputs.imageUri }}"
             fi
-            echo $imageId
+            
             ipaddr=$(az vm create --resource-group $groupName --name "app-vm-${{ GITHUB.RUN_NUMBER }}" --admin-username azureadmin --generate-ssh-keys --location $region \
             --image $imageId --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
             
             az vm open-port --port 80 -n "app-vm-${{ GITHUB.RUN_NUMBER }}" -g $groupName
             echo "::set-output name=ipaddress::$ipaddr"
             
-      - name: Test VM connectivity    
+      - name: Test VM      
         run: |
             echo "Deployment finished. Checking ${{ steps.create-vm-from-image.outputs.ipaddress }} output"
             echo -n "Warm up wait..."
@@ -193,5 +187,3 @@ jobs:
             echo "calling http endpoint.."
             curl http://${{ steps.create-vm-from-image.outputs.ipaddress }}            
       
-
- 
