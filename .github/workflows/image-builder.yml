@@ -60,15 +60,19 @@ jobs:
 
       - name: Check az providers and Resource Group creation 
         uses: azure/CLI@1.0.4
-        with:
+        with: 
           azcliversion: latest
+          location:  ${{ github.event.inputs.environment }}
+          resourcegroup:  ${{ github.event.inputs.resourceGroup }}
           inlineScript: |
             #constants
             BLUE='\033[1;34m'
             RED='\033[1;31m'
             NC='\033[0m'
             errorState=0
-
+            groupName='${{ github.event.inputs.resourceGroup }}'
+            region='${{ github.event.inputs.location }}'
+            
             # Check provider list
             providers=("Microsoft.VirtualMachineImages" "Microsoft.KeyVault" "Microsoft.Compute" "Microsoft.Storage" "Microsoft.Network")
             for provider in ${providers[@]}; do
@@ -91,7 +95,6 @@ jobs:
                     echo "::debug::Feature registered!"
             fi
             
-
             az group create -n $groupName -l $region
 
       - name: Build VM Image
