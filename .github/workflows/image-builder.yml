@@ -179,7 +179,7 @@ jobs:
                         
             if [ '${{ github.event.inputs.dist-type }}' = 'VHD' ]; then
               image=$(echo "${{ needs.build-vm.outputs.imageUri }}"  | cut -d "?" -f1)
-              imageId=$(az image create --name $vnmname --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
+              imageId=$(az image create --name $vmname --resource-group $groupName --source $image --os-type Linux --storage-sku Standard_LRS --hyper-v-generation V2 --query id -o tsv)
             else
               imageId="${{ needs.build-vm.outputs.imageUri }}"
             fi
