@@ -70,10 +70,11 @@ jobs:
             RED='\033[1;31m'
             NC='\033[0m'
             errorState=0
+            
+            # Check provider list
             groupName='${{ github.event.inputs.resourceGroup }}'
             region='${{ github.event.inputs.location }}'
             
-            # Check provider list
             providers=("Microsoft.VirtualMachineImages" "Microsoft.KeyVault" "Microsoft.Compute" "Microsoft.Storage" "Microsoft.Network")
             for provider in ${providers[@]}; do
               state=$(az provider show --namespace ${provider} -o tsv --query registrationState)
