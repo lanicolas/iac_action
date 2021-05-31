@@ -186,7 +186,7 @@ jobs:
               imageId="${{ needs.build-vm.outputs.imageUri }}"
             fi
             
-            ipaddr=$(az vm create --resource-group $groupName --name $groupName --admin-username azureadmin --generate-ssh-keys --location $region \
+            ipaddr=$(az vm create --resource-group $groupName --name $vmname --admin-username azureadmin --generate-ssh-keys --location $region \
             --image $imageId --public-ip-address-allocation dynamic --query publicIpAddress -o tsv)
             
             az vm open-port --port 80 -n $vmname -g $groupName
